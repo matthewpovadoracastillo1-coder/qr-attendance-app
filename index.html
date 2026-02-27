@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SF2 QR Attendance System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            padding-bottom: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            padding: 15px;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .tab-btn {
+            padding: 10px 16px;
+            border: none;
+            background: #f0f0f0;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            color: #666;
+            font-size: 0.85em;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            margin: 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .student-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+            background: #f8f9fa;
+            padding: 10px;
+        }
+
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .student-info {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .student-name {
+            font-weight: 700;
+            color: #333;
+            font-size: 1em;
+        }
+
+        .student-details {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        .qr-code {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            display: inline-block;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .scanner-container {
+            text-align: center;
+            padding: 10px;
+        }
+
+        .attendance-log {
+            max-height: 250px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .log-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: white;
+            margin-bottom: 6px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            animation: slideIn 0.3s;
+            font-size: 0.9em;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .present { border-left-color: #38ef7d; }
+        .absent { border-left-color: #f45c43; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .stat-label {
+            font-size: 0.75em;
+            opacity: 0.9;
+            text-transform: uppercase;
+        }
+
+        .hidden { display: none !important; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            animation: scaleIn 0.3s;
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .close-modal {
+            margin-top: 15px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .print-area {
+            background: white;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 10px;
+        }
+
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .qr-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            break-inside: avoid;
+        }
+
+        .qr-item canvas, .qr-item img {
+            max-width: 120px;
+            height: auto;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            margin: 2px;
+        }
+
+        #video-container {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 2000;
+            max-width: 300px;
+            font-size: 0.9em;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .toast.error { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
+
+        .gender-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 600;
+            margin-left: 5px;
+            text-transform: uppercase;
+        }
+
+        .gender-male { background: #cce5ff; color: #004085; }
+        .gender-female { background: #f8d7da; color: #721c24; }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        @media (min-width: 768px) {
+            .form-row {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            header h1 {
+                font-size: 2.5em;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+
+        h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        h3 {
+            font-size: 1.1em;
+            margin: 15px 0 10px 0;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 SF2 QR Attendance</h1>
+            <p>DEPED School Form 2 Digital System</p>
+        </header>
+
+        <div class="card">
+            <div class="tabs no-print" id="mainTabs">
+                <button class="tab-btn active" onclick="showTab('setup', this)">⚙️ Setup</button>
+                <button class="tab-btn" onclick="showTab('students', this)">👥 Students</button>
+                <button class="tab-btn" onclick="showTab('qr', this)">📱 QR Codes</button>
+                <button class="tab-btn" onclick="showTab('scan', this)">📷 Scan</button>
+                <button class="tab-btn" onclick="showTab('manual', this)">📝 Manual</button>
+                <button class="tab-btn" onclick="showTab('export', this)">📊 Export</button>
+            </div>
+
+            <!-- Setup Tab -->
+            <div id="setup" class="tab-content active">
+                <h2>School Information</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>School Name</label>
+                        <input type="text" id="schoolName" value="Dimasalang National High School">
+                    </div>
+                    <div class="form-group">
+                        <label>School ID</label>
+                        <input type="text" id="schoolId" value="302132">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>District</label>
+                        <input type="text" id="district" value="Dimasalang">
+                    </div>
+                    <div class="form-group">
+                        <label>Division</label>
+                        <input type="text" id="division" value="Masbate">
+                    </div>
+                    <div class="form-group">
+                        <label>Region</label>
+                        <input type="text" id="region" value="Region V">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>School Year</label>
+                        <input type="text" id="schoolYear" value="2025-2026">
+                    </div>
+                    <div class="form-group">
+                        <label>Grade Level</label>
+                        <select id="gradeLevel">
+                            <option value="11">Grade 11</option>
+                            <option value="12" selected>Grade 12</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Section</label>
+                        <input type="text" id="section" value="ASTER">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Track and Strand</label>
+                    <input type="text" id="trackStrand" value="Academic Track - Humanities and Social Sciences">
+                </div>
+                <div class="form-group">
+                    <label>Adviser Name</label>
+                    <input type="text" id="adviserName" value="ENJIE A. TAMAYO">
+                </div>
+                <button class="btn btn-primary" onclick="saveSetup()">Save Configuration</button>
+                <button class="btn btn-secondary" onclick="clearAllData()">Clear All Data</button>
+            </div>
+
+            <!-- Students Tab -->
+            <div id="students" class="tab-content">
+                <h2>Student Management</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <input type="text" id="lastName" placeholder="Last Name">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="firstName" placeholder="First Name">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="middleName" placeholder="Middle Name">
+                    </div>
+                    <div class="form-group">
+                        <select id="gender" style="width: 100%;">
+                            <option value="M">Male</option>
+                            <option value="F">Female</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="addStudent()">Add Student</button>
+                <button class="btn btn-warning" onclick="loadSampleData()">Load Sample Data</button>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalStudents">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="maleCount">0</div>
+                        <div class="stat-label">Male</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="femaleCount">0</div>
+                        <div class="stat-label">Female</div>
+                    </div>
+                </div>
+
+                <div class="student-list" id="studentList">
+                    <div class="empty-state">
+                        <p>No students added yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR Codes Tab -->
+            <div id="qr" class="tab-content">
+                <h2>Generate QR Codes</h2>
+                <p style="margin-bottom: 15px; color: #666; font-size: 0.9em;">
+                    Generate printable QR codes for students. Print and laminate for daily use.
+                </p>
+                <button class="btn btn-primary" onclick="generateAllQR()">Generate All QR</button>
+                <button class="btn btn-warning" onclick="window.print()">Print</button>
+                
+                <div class="print-area" id="qrContainer">
+                    <p style="text-align: center; color: #999; padding: 20px;">Click "Generate All QR" to create codes</p>
+                </div>
+            </div>
+
+            <!-- Scan Tab -->
+            <div id="scan" class="tab-content">
+                <h2>QR Scanner</h2>
+                <div class="scanner-container">
+                    <div id="reader" style="min-height: 300px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                        <p style="color: #999;">Camera not started</p>
+                    </div>
+                    <div id="scanStatus" style="margin-top: 15px; font-size: 1em; color: #666; font-weight: 600;">
+                        Ready to scan
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-primary" id="startScanBtn" onclick="startScanner()">Start Camera</button>
+                        <button class="btn btn-danger hidden" id="stopScanBtn" onclick="stopScanner()">Stop Camera</button>
+                    </div>
+                </div>
+                
+                <div class="attendance-log" id="scanLog">
+                    <h3 style="margin-bottom: 10px; font-size: 1em;">
